@@ -333,7 +333,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   fetchApprovals: async () => {
-    const data = await apiFetch<any[]>("/api/approvals?status=pending", null as any);
+    const data = await apiFetch<any[]>("/api/approvals", null as any);
     const tasks = get().tasks;
     if (Array.isArray(data)) {
       const approvals: Approval[] = data.map((a: any) => {
@@ -390,6 +390,18 @@ export const useStore = create<StoreState>((set, get) => ({
             reason: rec.reason,
           }];
         }
+      } else if (Array.isArray(data.allModels)) {
+        recs = data.allModels.map((m: any) => ({
+          id: m.id,
+          name: m.modelName || m.name,
+          matchScore: m.matchConfidence || m.matchScore || Math.round((1 - m.finalMisfit / 5) * 100),
+          successRate: m.successRate || Math.round((1 - m.finalMisfit / 5) * 80),
+          description: m.reason || m.description || `${m.surveyArea}历史反演模型，算法${m.algorithm}，拟合差${m.finalMisfit}`,
+          weights: { regularization: m.regularization || m.regularizationWeight || 0, smoothness: m.smoothness || 0.85 },
+          applied: m.applied || false,
+          algorithm: m.algorithm,
+          surveyArea: m.surveyArea,
+        }));
       } else if (data.groupedByArea) {
         Object.entries(data.groupedByArea as Record<string, any[]>).forEach(([, models]) => {
           models.forEach((m: any) => {
