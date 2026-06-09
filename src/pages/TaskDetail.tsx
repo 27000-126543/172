@@ -13,6 +13,8 @@ import {
   AlertCircle,
   CheckCircle,
   X,
+  FileText,
+  Download,
 } from "lucide-react";
 import {
   LineChart,
@@ -188,7 +190,11 @@ export default function TaskDetail() {
             <StatusBadge status={currentTask.status} />
           </div>
           <p className="text-sm text-geo-text-secondary mt-1">
-            测区：{currentTask.surveyArea} | 创建时间：{currentTask.created}
+            测区：{currentTask.surveyArea}
+            {currentTask.lineName ? ` | 测线：${currentTask.lineName}` : ""}
+            {currentTask.frequencyRange ? ` | 频段：${currentTask.frequencyRange}` : ""}
+            {currentTask.stationCount ? ` | 测点数：${currentTask.stationCount}` : ""}
+            {" | 创建时间：" + currentTask.created}
           </p>
         </div>
       </div>
@@ -229,6 +235,44 @@ export default function TaskDetail() {
           ))}
         </div>
       </div>
+
+      {currentTask.files && currentTask.files.length > 0 && (
+        <div className="gradient-card rounded-lg border border-slate-700/50 p-5">
+          <h2 className="text-sm font-medium text-geo-text mb-4 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-geo-accent" />
+            上传文件
+          </h2>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-700/50">
+                <th className="text-left text-xs font-medium text-geo-text-secondary px-4 py-2">文件名</th>
+                <th className="text-left text-xs font-medium text-geo-text-secondary px-4 py-2">文件大小</th>
+                <th className="text-left text-xs font-medium text-geo-text-secondary px-4 py-2">上传时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentTask.files.map((file, idx) => (
+                <tr key={idx} className="border-b border-slate-700/30">
+                  <td className="px-4 py-2.5 text-sm text-geo-text flex items-center gap-2">
+                    <FileText className="w-3.5 h-3.5 text-geo-accent" />
+                    {file.name}
+                  </td>
+                  <td className="px-4 py-2.5 text-sm font-mono text-geo-text-secondary">
+                    {file.size >= 1048576
+                      ? (file.size / 1048576).toFixed(1) + " MB"
+                      : file.size >= 1024
+                      ? (file.size / 1024).toFixed(1) + " KB"
+                      : file.size + " B"}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-geo-muted">
+                    {file.uploadedAt ? file.uploadedAt.split("T").join(" ").substring(0, 16) : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 gradient-card rounded-lg border border-slate-700/50 p-5">

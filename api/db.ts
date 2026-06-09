@@ -2,6 +2,12 @@ import { v4 as uuidv4 } from 'uuid'
 
 export type TaskStatus = 'pending_check' | 'preprocessing' | 'impedance_calc' | 'inversion_iter' | 'image_gen' | 'completed' | 'rollback'
 
+export interface TaskFileInfo {
+  name: string
+  size: number
+  uploadedAt: string
+}
+
 export interface Task {
   id: string
   name: string
@@ -15,6 +21,8 @@ export interface Task {
   description: string
   stationCount: number
   frequencyRange: string
+  lineName: string
+  files: TaskFileInfo[]
   previousStatus?: TaskStatus
 }
 
@@ -168,6 +176,8 @@ const tasks: Task[] = [
     description: '青藏高原东缘L1测线深部电性结构探测，含32个测点，频率范围0.001-1000Hz',
     stationCount: 32,
     frequencyRange: '0.001-1000Hz',
+    lineName: 'L1',
+    files: [{ name: 'L1_MT_timeseries.edi', size: 2048576, uploadedAt: ts(15) }, { name: 'L1_station_coords.j', size: 153600, uploadedAt: ts(15) }],
   },
   {
     id: 't2',
@@ -182,6 +192,8 @@ const tasks: Task[] = [
     description: '华北克拉通中部A剖面岩石圈结构探测，含48个测点，频率范围0.01-1000Hz',
     stationCount: 48,
     frequencyRange: '0.01-1000Hz',
+    lineName: 'A',
+    files: [{ name: 'A_profile_MT_data.edi', size: 3145728, uploadedAt: ts(8) }],
   },
   {
     id: 't3',
@@ -196,6 +208,8 @@ const tasks: Task[] = [
     description: '南海北部陆缘B测线地壳与上地幔电性结构探测，含36个测点',
     stationCount: 36,
     frequencyRange: '0.001-500Hz',
+    lineName: 'B',
+    files: [{ name: 'B_line_seafloor_MT.ts', size: 4194304, uploadedAt: ts(6) }, { name: 'B_line_metadata.j', size: 256000, uploadedAt: ts(6) }],
   },
   {
     id: 't4',
@@ -210,6 +224,8 @@ const tasks: Task[] = [
     description: '青藏高原东缘L2测线三维电性结构建模，含56个测点',
     stationCount: 56,
     frequencyRange: '0.001-1000Hz',
+    lineName: 'L2',
+    files: [{ name: 'L2_3D_MT_data.edi', size: 5242880, uploadedAt: ts(10) }],
   },
   {
     id: 't5',
@@ -224,6 +240,8 @@ const tasks: Task[] = [
     description: '华北克拉通南部C剖面深部结构探测，含28个测点',
     stationCount: 28,
     frequencyRange: '0.01-500Hz',
+    lineName: 'C',
+    files: [{ name: 'C_section_data.edi', size: 1572864, uploadedAt: ts(4) }],
   },
   {
     id: 't6',
@@ -238,6 +256,8 @@ const tasks: Task[] = [
     description: '南海北部陆缘D测线海洋大地电磁数据预处理，含24个测点',
     stationCount: 24,
     frequencyRange: '0.01-300Hz',
+    lineName: 'D',
+    files: [{ name: 'D_line_raw.ts', size: 8388608, uploadedAt: ts(3) }],
   },
   {
     id: 't7',
@@ -252,6 +272,8 @@ const tasks: Task[] = [
     description: '青藏高原东缘L3测线新采集数据质量检查，含40个测点',
     stationCount: 40,
     frequencyRange: '0.001-1000Hz',
+    lineName: 'L3',
+    files: [{ name: 'L3_new_survey.edi', size: 2621440, uploadedAt: ts(2) }],
   },
   {
     id: 't8',
@@ -267,6 +289,8 @@ const tasks: Task[] = [
     description: '华北克拉通北部E剖面反演发散，已回退至数据审核阶段',
     stationCount: 44,
     frequencyRange: '0.01-1000Hz',
+    lineName: 'E',
+    files: [{ name: 'E_profile_data.edi', size: 3670016, uploadedAt: ts(12) }],
   },
   {
     id: 't9',
@@ -281,6 +305,8 @@ const tasks: Task[] = [
     description: '南海北部陆缘F测线浅部电性结构探测，含20个测点',
     stationCount: 20,
     frequencyRange: '1-1000Hz',
+    lineName: 'F',
+    files: [{ name: 'F_shallow_MT.ts', size: 1048576, uploadedAt: ts(20) }],
   },
   {
     id: 't10',
@@ -295,6 +321,8 @@ const tasks: Task[] = [
     description: '青藏高原东缘L4测线远参考道数据处理，含35个测点',
     stationCount: 35,
     frequencyRange: '0.001-1000Hz',
+    lineName: 'L4',
+    files: [{ name: 'L4_remote_ref.edi', size: 2097152, uploadedAt: ts(1) }, { name: 'L4_coords.j', size: 128000, uploadedAt: ts(1) }],
   },
 ]
 
@@ -370,6 +398,26 @@ const alerts: Alert[] = [
     message: '青藏高原东缘L2测线测点MT-023附近出现孤立高阻异常，可能为近场效应',
     status: 'active',
     createdAt: ts(0, 8),
+  },
+  {
+    id: 'a7',
+    taskId: 't4',
+    surveyArea: '青藏高原东缘测区',
+    type: 'false_anomaly',
+    severity: 'warning',
+    message: '青藏高原东缘L2测线测点MT-015处低频段出现假低阻异常，疑为静态位移效应',
+    status: 'active',
+    createdAt: ts(0, 6),
+  },
+  {
+    id: 'a8',
+    taskId: 't1',
+    surveyArea: '青藏高原东缘测区',
+    type: 'false_anomaly',
+    severity: 'warning',
+    message: '青藏高原东缘L1测线深部50km处出现孤立导常体，与已知地质资料不符',
+    status: 'active',
+    createdAt: ts(0, 4),
   },
 ]
 

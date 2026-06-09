@@ -62,7 +62,7 @@ router.get('/:id', (req: Request, res: Response): void => {
 })
 
 router.post('/', (req: Request, res: Response): void => {
-  const { name, surveyArea, algorithm, regularization, createdBy, description, stationCount, frequencyRange } = req.body
+  const { name, surveyArea, algorithm, regularization, createdBy, description, stationCount, frequencyRange, lineName, files } = req.body
 
   if (!name || !surveyArea) {
     res.status(400).json({ success: false, error: '任务名称和测区为必填项' })
@@ -84,6 +84,8 @@ router.post('/', (req: Request, res: Response): void => {
     description: description || '',
     stationCount: stationCount || 0,
     frequencyRange: frequencyRange || '',
+    lineName: lineName || '',
+    files: Array.isArray(files) ? files : [],
   })
 
   res.status(201).json({ success: true, data: task })

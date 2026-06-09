@@ -27,6 +27,10 @@ export default function Alerts() {
     fetchAlerts().then(() => fetchSurveyAreaStatus());
   }, [fetchAlerts, fetchSurveyAreaStatus]);
 
+  const areaNames = surveyAreaStatus.length > 0
+    ? surveyAreaStatus.map((s) => s.name)
+    : ["青藏高原东缘测区", "华北克拉通测区", "南海北部陆缘测区"];
+
   useEffect(() => {
     if (actionMsg) {
       const t = setTimeout(() => setActionMsg(null), 3000);
@@ -50,7 +54,7 @@ export default function Alerts() {
     const falseAnomalyCount = activeAlerts.filter((a) => a.type === "假异常检测").length;
     return {
       name: area,
-      paused: falseAnomalyCount >= 3,
+      paused: false,
       activeAlerts: activeAlerts.length,
       criticalAlerts: criticalAlerts.length,
       falseAnomalyCount,
@@ -61,9 +65,11 @@ export default function Alerts() {
     setLoadingId(id);
     try {
       await processAlert(id);
+      await fetchSurveyAreaStatus();
       setActionMsg({ type: "success", text: "预警已处理" });
     } catch (err: any) {
       if (err.message?.includes("暂停")) {
+        await fetchSurveyAreaStatus();
         setActionMsg({ type: "success", text: "预警已处理，测区已暂停" });
       } else {
         setActionMsg({ type: "error", text: err.message || "处理失败" });
@@ -77,6 +83,7 @@ export default function Alerts() {
     setLoadingId(id);
     try {
       await dismissAlert(id);
+      await fetchSurveyAreaStatus();
       setActionMsg({ type: "success", text: "预警已忽略" });
     } catch (err: any) {
       setActionMsg({ type: "error", text: err.message || "操作失败" });
@@ -198,7 +205,7 @@ export default function Alerts() {
       <div className="gradient-card rounded-lg border border-slate-700/50 p-5">
         <h2 className="text-sm font-medium text-geo-text mb-4">测区暂停状态</h2>
         <div className="grid grid-cols-3 gap-3">
-          {defaultAreas.map((area) => {
+          {areaNames.map((area) => {
             const status = getAreaStatus(area);
             return (
               <div
@@ -218,9 +225,14 @@ export default function Alerts() {
                   )}
                 </div>
                 {status.paused ? (
-                  <p className="text-xs text-geo-danger mt-1 flex items-center gap-1">
-                    <Bell className="w-3 h-3" /> 已暂停 - 已通知首席科学家
-                  </p>
+                  <div className="mt-1">
+                    <p className="text-xs text-geo-danger flex items-center gap-1">
+                      <Bell className="w-3 h-3" /> 已暂停 - 已通知首席科学家
+                    </p>
+                    {status.pausedReason && (
+                      <p className="text-xs text-geo-text-secondary mt-0.5">{status.pausedReason}</p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-xs text-geo-muted mt-1">运行正常</p>
                 )}

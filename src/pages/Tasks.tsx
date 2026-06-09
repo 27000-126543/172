@@ -135,12 +135,17 @@ export default function Tasks() {
     const stationVal = parseInt(formStations) || 0;
 
     if (isAreaPaused(formArea)) {
-      setFormError("该测区已暂停，无法创建新任务");
+      setFormError("该测区已暂停，无法创建新任务，请联系首席科学家");
       return;
     }
 
     setFormSubmitting(true);
     try {
+      const files = formFiles.map((f) => ({
+        name: f.name,
+        size: f.size,
+        uploadedAt: new Date().toISOString(),
+      }));
       const result = await createTask({
         name: formName.trim(),
         surveyArea: formArea,
@@ -150,6 +155,7 @@ export default function Tasks() {
         stationCount: stationVal,
         frequencyRange: formFreq.trim(),
         lineName: formLine.trim(),
+        files,
       });
       if (result.success) {
         setShowUpload(false);
@@ -351,14 +357,28 @@ export default function Tasks() {
                   <label className="text-xs text-geo-text-secondary block mb-1">测区</label>
                   <select
                     value={formArea}
-                    onChange={(e) => setFormArea(e.target.value)}
+                    onChange={(e) => {
+                      setFormArea(e.target.value);
+                      if (e.target.value && isAreaPaused(e.target.value)) {
+                        setFormError("该测区已暂停，无法创建新任务，请联系首席科学家");
+                      } else if (formError?.includes("暂停")) {
+                        setFormError("");
+                      }
+                    }}
                     className="w-full bg-geo-secondary border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-geo-text focus:outline-none focus:border-geo-accent"
                   >
                     <option value="">请选择测区</option>
-                    <option value="青藏高原东缘测区">青藏高原东缘测区</option>
-                    <option value="华北克拉通测区">华北克拉通测区</option>
-                    <option value="南海北部陆缘测区">南海北部陆缘测区</option>
+                    {areaOptions.filter(o => o.value).map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}{isAreaPaused(o.value) ? "（已暂停）" : ""}
+                      </option>
+                    ))}
                   </select>
+                  {formArea && isAreaPaused(formArea) && (
+                    <p className="mt-1 text-xs text-geo-danger flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> 该测区已暂停，无法提交新任务
+                    </p>
+                  )}
                 </div>
               </div>
 

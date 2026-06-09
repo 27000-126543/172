@@ -15,6 +15,12 @@ export interface User {
   role: string;
 }
 
+export interface TaskFileInfo {
+  name: string;
+  size: number;
+  uploadedAt: string;
+}
+
 export interface Task {
   id: string;
   name: string;
@@ -32,6 +38,7 @@ export interface Task {
   stationCount?: number;
   frequencyRange?: string;
   lineName?: string;
+  files?: TaskFileInfo[];
 }
 
 export interface DashboardStats {
@@ -103,6 +110,8 @@ export interface SurveyAreaStatus {
   activeAlerts: number;
   criticalAlerts: number;
   falseAnomalyCount: number;
+  pausedAt?: string;
+  pausedReason?: string;
 }
 
 export interface WeightPreset {
@@ -150,7 +159,7 @@ interface StoreState {
   fetchRegAdjustments: (taskId: string) => Promise<void>;
   fetchAlgorithmSwitches: (taskId: string) => Promise<void>;
   fetchSurveyAreaStatus: () => Promise<void>;
-  createTask: (data: { name: string; surveyArea: string; algorithm: string; regularization: number; description: string; stationCount: number; frequencyRange: string; lineName?: string }) => Promise<{ success: boolean; data?: Task; error?: string }>;
+  createTask: (data: { name: string; surveyArea: string; algorithm: string; regularization: number; description: string; stationCount: number; frequencyRange: string; lineName?: string; files?: TaskFileInfo[] }) => Promise<{ success: boolean; data?: Task; error?: string }>;
   adjustRegularization: (taskId: string, value: number, reason: string) => Promise<void>;
   switchAlgorithm: (taskId: string, algorithm: string, reason: string) => Promise<void>;
   advanceTask: (taskId: string, status: string) => Promise<void>;
@@ -249,6 +258,7 @@ function mapTaskFromApi(t: any): Task {
     stationCount: t.stationCount,
     frequencyRange: t.frequencyRange,
     lineName: t.lineName,
+    files: Array.isArray(t.files) ? t.files : [],
   };
 }
 
@@ -493,22 +503,19 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   fetchSurveyAreaStatus: async () => {
-    const alerts = get().alerts;
-    const areas = ["青藏高原东缘测区", "华北克拉通测区", "南海北部陆缘测区"];
-    const statuses: SurveyAreaStatus[] = areas.map((name) => {
-      const areaAlerts = alerts.filter((a) => a.surveyArea === name);
-      const activeAlerts = areaAlerts.filter((a) => !a.processed);
-      const criticalAlerts = activeAlerts.filter((a) => a.level === "critical");
-      const falseAnomalyCount = activeAlerts.filter((a) => a.type === "假异常检测").length;
-      return {
-        name,
-        paused: falseAnomalyCount >= 3,
-        activeAlerts: activeAlerts.length,
-        criticalAlerts: criticalAlerts.length,
-        falseAnomalyCount,
-      };
-    });
-    set({ surveyAreaStatus: statuses });
+    const data = await apiFetch<any[]>("/api/alerts/area-status", null as any);
+    if (Array.isArray(data)) {
+      const statuses: SurveyAreaStatus[] = data.map((s: any) => ({
+        name: s.name,
+        paused: s.paused ?? false,
+        activeAlerts: s.activeAlerts ?? 0,
+        criticalAlerts: s.criticalAlerts ?? 0,
+        falseAnomalyCount: s.falseAnomalyCount ?? 0,
+        pausedAt: s.pausedAt,
+        pausedReason: s.pausedReason,
+      }));
+      set({ surveyAreaStatus: statuses });
+    }
   },
 
   createTask: async (data) => {
@@ -521,6 +528,7 @@ export const useStore = create<StoreState>((set, get) => ({
       stationCount: data.stationCount,
       frequencyRange: data.frequencyRange,
       lineName: data.lineName,
+      files: data.files,
     });
     if (res.success && res.data) {
       const task = mapTaskFromApi(res.data);
@@ -668,15 +676,22 @@ export const useStore = create<StoreState>((set, get) => ({
     const url = surveyArea ? `/api/recommend/weights?surveyArea=${encodeURIComponent(surveyArea)}` : "/api/recommend/weights";
     const data = await apiFetch<any>(url, null as any);
     if (data) {
-      const presets: WeightPreset[] = Array.isArray(data.presets)
-        ? data.presets.map((p: any) => ({
-            surveyArea: p.surveyArea,
-            misfit: p.misfit,
-            roughness: p.roughness,
-            name: p.name || "",
-            description: p.description || "",
-          }))
+      const rawPresets = Array.isArray(data.allPresets)
+        ? data.allPresets
+        : Array.isArray(data.presets)
+        ? data.presets
+        : Array.isArray(data.availablePresets)
+        ? data.availablePresets
+        : data.weights
+        ? [{ surveyArea: data.surveyArea || data.weights.surveyArea, ...data.weights }]
         : [];
+      const presets: WeightPreset[] = rawPresets.map((p: any) => ({
+        surveyArea: p.surveyArea,
+        misfit: p.misfit,
+        roughness: p.roughness,
+        name: p.name || "",
+        description: p.description || "",
+      }));
       set({ weightPresets: presets, defaultArea: data.defaultArea || "" });
     }
   },
